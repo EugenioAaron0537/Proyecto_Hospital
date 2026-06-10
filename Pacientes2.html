@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Jua:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Hospital Oro de Ley - Gestión de Pacientes</title>
+</head>
+<body>
+
+<header>
+    <h1>Gestión de Pacientes - Hospital Oro de Ley</h1>
+    <p>Rellene los datos para registrar o use las tarjetas de abajo para editar cualquier campo.</p>
+</header>
+
+<main>
+    <div class="form-container">
+        <form id="formPacientes" onsubmit="procesarFormulario(event)">
+            
+            <div class="form-group">
+                <label for="id_paciente">ID del Paciente:</label>
+                <input type="text" id="id_paciente" name="id_paciente" placeholder="Ej: P-001" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="nombre">Nombre:</label>
+                <input type="text" id="nombre" name="nombre" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="apellido_paterno">Apellido Paterno:</label>
+                <input type="text" id="apellido_paterno" name="apellido_paterno" required>
+            </div>
+
+            <div class="form-group">
+                <label for="apellido_materno">Apellido Materno:</label>
+                <input type="text" id="apellido_materno" name="apellido_materno" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="fecha_nac">Fecha de Nacimiento:</label>
+                <input type="date" id="fecha_nac" name="fecha_nac" required>
+            </div>
+
+            <div class="form-group">
+                <label for="genero">Género:</label>
+                <input type="text" id="genero" name="genero" placeholder="Masculino / Femenino" required>
+            </div>
+
+            <div class="form-group">
+                <label for="tipo_sangre">Tipo de Sangre:</label>
+                <input type="text" id="tipo_sangre" name="tipo_sangre" placeholder="Ej: O+, A, B+" required>
+            </div>
+
+            <div class="form-group">
+                <label for="alergias">Alergias:</label>
+                <input type="text" id="alergias" name="alergias" placeholder="Escriba ninguna si aplica" required>
+            </div>
+
+            <div class="form-group">
+                <label for="contacto_emergencia">Contacto de Emergencia:</label>
+                <input type="text" id="contacto_emergencia" name="contacto_emergencia" placeholder="Ej: 555-0105" required>
+            </div>
+
+            <div class="form-group">
+                <label for="documento_identidad">Documento de Identidad:</label>
+                <input type="text" id="documento_identidad" name="documento_identidad" required>
+            </div>
+
+            <div class="form-group">
+                <label for="seguro_social">¿Cuenta con Seguro Social?</label>
+                <input type="text" id="seguro_social" name="seguro_social" placeholder="Si / No" required>
+            </div>
+
+            <div class="form-group">
+                <label for="num_seguro_social">Número de Seguro Social:</label>
+                <input type="text" id="num_seguro_social" name="num_seguro_social" placeholder="Escriba No existente si aplica">
+            </div>
+
+            <div class="form-group">
+                <label for="medico_asignado">Médico Asignado:</label>
+                <input type="text" id="medico_asignado" name="medico_asignado" required>
+            </div>
+
+            <div class="form-group">
+                <label for="motivo_cita">Motivo de Cita:</label>
+                <input type="text" id="motivo_cita" name="motivo_cita" required>
+            </div>
+
+            <div class="form-group">
+                <label for="habitacion">Habitación:</label>
+                <input type="text" id="habitacion" name="habitacion" placeholder="Ej: 204-A o N/A" required>
+            </div>
+
+            <div class="form-group">
+                <label for="medicamento_recetado">Medicamento Recetado:</label>
+                <input type="text" id="medicamento_recetado" name="medicamento_recetado" required>
+            </div>
+
+            <button type="submit" id="btnSubmitForm" class="btn-submit">Dar de alta al Paciente</button>
+        </form>
+    </div>
+
+    <h2 style="color: #6E5A1C; margin-top: 30px; font-family: 'Jua', sans-serif;">Pacientes Registrados</h2>
+    <button onclick="cargarPacientes()" style="background-color: #E6CD6E; color: #5C501E; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-family: 'Poppins'; font-weight: 600; margin-bottom: 10px;">🔄 Actualizar Lista</button>
+
+    <div id="listaPacientes" style="width: 100%; max-width: 500px;"></div>
+
+    <a href="index.html" class="btn-back">Volver al Inicio</a>
+</main>
+
+<footer>
+    <p>Eugenio Zarate Aaron David - Programación</p>
+    <p>24308051280537 - 4-I</p>
+</footer>
+
+<script>
+// Variables de control global para la edición total
+let editandoId = null;
+let adminPasswordGlobal = "";
+let listaPacientesMemoria = []; 
+
+window.onload = cargarPacientes;
+
+async function cargarPacientes() {
+    try {
+        const respuesta = await fetch('/pacientes2');
+        const pacientes = await respuesta.json();
+        listaPacientesMemoria = pacientes; 
+        
+        const contenedor = document.getElementById("listaPacientes");
+        contenedor.innerHTML = "";
+
+        pacientes.forEach(pac => {
+            let nuevaCard = document.createElement("div");
+            nuevaCard.classList.add("card");
+            
+            nuevaCard.innerHTML = `
+                <h2>${pac.nombre} ${pac.apellido_paterno} ${pac.apellido_materno || ''}</h2>
+                <p><strong>ID Paciente:</strong> ${pac.id_paciente}</p>
+                <p><strong>Fecha de Nacimiento:</strong> ${pac.fecha_nac}</p>
+                <p><strong>Género:</strong> ${pac.genero}</p>
+                <p><strong>Tipo de Sangre:</strong> ${pac.tipo_sangre}</p>
+                <p><strong>Alergias:</strong> ${pac.alergias}</p>
+                <p><strong>Contacto de Emergencia:</strong> ${pac.contacto_emergencia}</p>
+                <p><strong>Documento Identidad:</strong> ${pac.documento_identidad}</p>
+                <p><strong>¿Seguro Social?:</strong> ${pac.seguro_social}</p>
+                <p><strong>Núm. Seguro Social:</strong> ${pac.num_seguro_social || 'N/A'}</p>
+                <p><strong>Médico Asignado:</strong> ${pac.medico_asignado}</p>
+                <p><strong>Motivo de Cita:</strong> ${pac.motivo_cita}</p>
+                <p><strong>Habitación:</strong> ${pac.habitacion}</p>
+                <p><strong>Medicamento Recetado:</strong> ${pac.medicamento_recetado}</p>
+                <div style="margin-top: 15px; display: flex; gap: 10px;">
+                    <button onclick="prepararEdicion('${pac.id_paciente}')" class="btn-card-edit">✏️ Editar Todo (Admin)</button>
+                    <button onclick="eliminarPaciente('${pac.id_paciente}')" class="btn-card-delete">🗑️ Dar de Baja (Admin)</button>
+                </div>
+            `;
+            contenedor.appendChild(nuevaCard);
+        });
+    } catch (error) {
+        console.error("Error al leer pacientes:", error);
+    }
+}
+
+function prepararEdicion(id) {
+    const password = prompt("⚠️ Acción de Administrador.\nIngrese la contraseña para desbloquear la modificación total del registro:");
+    if (!password) return;
+
+    const pac = listaPacientesMemoria.find(p => p.id_paciente === id);
+    if (!pac) return;
+
+    adminPasswordGlobal = password;
+    editandoId = id;
+
+    document.getElementById("id_paciente").value = pac.id_paciente;
+    document.getElementById("id_paciente").readOnly = true; 
+    document.getElementById("nombre").value = pac.nombre;
+    document.getElementById("apellido_paterno").value = pac.apellido_paterno;
+    document.getElementById("apellido_materno").value = pac.apellido_materno;
+    document.getElementById("fecha_nac").value = pac.fecha_nac;
+    document.getElementById("genero").value = pac.genero;
+    document.getElementById("tipo_sangre").value = pac.tipo_sangre;
+    document.getElementById("alergias").value = pac.alergias;
+    document.getElementById("contacto_emergencia").value = pac.contacto_emergencia;
+    document.getElementById("documento_identidad").value = pac.documento_identidad;
+    document.getElementById("seguro_social").value = pac.seguro_social;
+    document.getElementById("num_seguro_social").value = pac.num_seguro_social || '';
+    document.getElementById("medico_asignado").value = pac.medico_asignado;
+    document.getElementById("motivo_cita").value = pac.motivo_cita;
+    document.getElementById("habitacion").value = pac.habitacion;
+    document.getElementById("medicamento_recetado").value = pac.medicamento_recetado;
+
+    const btnSubmit = document.getElementById("btnSubmitForm");
+    btnSubmit.innerText = "💾 Guardar Cambios en el Paciente";
+    btnSubmit.style.backgroundColor = "#006064"; 
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function procesarFormulario(event) {
+    event.preventDefault();
+
+    const datosPaciente = {
+        id_paciente: document.getElementById("id_paciente").value,
+        nombre: document.getElementById("nombre").value,
+        apellido_paterno: document.getElementById("apellido_paterno").value,
+        apellido_materno: document.getElementById("apellido_materno").value,
+        fecha_nac: document.getElementById("fecha_nac").value,
+        genero: document.getElementById("genero").value,
+        tipo_sangre: document.getElementById("tipo_sangre").value,
+        alergias: document.getElementById("alergias").value,
+        contacto_emergencia: document.getElementById("contacto_emergencia").value,
+        documento_identidad: document.getElementById("documento_identidad").value,
+        seguro_social: document.getElementById("seguro_social").value,
+        num_seguro_social: document.getElementById("num_seguro_social").value,
+        medico_asignado: document.getElementById("medico_asignado").value,
+        motivo_cita: document.getElementById("motivo_cita").value,
+        habitacion: document.getElementById("habitacion").value,
+        medicamento_recetado: document.getElementById("medicamento_recetado").value
+    };
+
+    if (editandoId) {
+        try {
+            const respuesta = await fetch(`/pacientes2/${editandoId}`, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'admin-password': adminPasswordGlobal 
+                },
+                body: JSON.stringify(datosPaciente) 
+            });
+
+            const resultado = await respuesta.json();
+
+            if (respuesta.ok) {
+                alert("✅ Registro actualizado por completo con éxito.");
+                restablecerFormulario();
+                cargarPacientes();
+            } else {
+                alert("❌ Denegado: " + resultado.error);
+            }
+        } catch (error) {
+            alert("⚠️ Error en la conexión al actualizar.");
+        }
+    } else {
+        try {
+            const respuesta = await fetch('/pacientes2', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(datosPaciente)
+            });
+
+            const resultado = await respuesta.json();
+
+            if (respuesta.ok) {
+                document.getElementById("formPacientes").reset();
+                alert("✅ " + resultado.mensaje);
+                cargarPacientes(); 
+            } else {
+                alert("❌ Error: " + resultado.error);
+            }
+        } catch (error) {
+            alert("⚠️ Error de conexión con el servidor.");
+        }
+    }
+}
+
+function restablecerFormulario() {
+    document.getElementById("formPacientes").reset();
+    document.getElementById("id_paciente").readOnly = false;
+    editandoId = null;
+    adminPasswordGlobal = "";
+    
+    const btnSubmit = document.getElementById("btnSubmitForm");
+    btnSubmit.innerText = "Dar de alta al Paciente";
+    btnSubmit.style.backgroundColor = "#E6CD6E";
+}
+
+async function eliminarPaciente(id) {
+    const password = prompt("⚠️ Acción de Administrador.\nIngrese la contraseña para ELIMINAR permanentemente a este paciente:");
+    if (!password) return;
+
+    if (!confirm(`¿Está seguro de dar de baja al paciente con ID ${id}?`)) return;
+
+    try {
+        const respuesta = await fetch(`/pacientes2/${id}`, {
+            method: 'DELETE',
+            headers: { 'admin-password': password }
+        });
+
+        const resultado = await respuesta.json();
+
+        if (respuesta.ok) {
+            alert("🗑️ " + resultado.mensaje);
+            if(editandoId === id) restablecerFormulario(); 
+            cargarPacientes();
+        } else {
+            alert("❌ Denegado: " + resultado.error);
+        }
+    } catch (error) {
+        alert("⚠️ Error en la conexión.");
+    }
+}
+</script>
+
+<style>
+    /* 1. Estilos Globales y Base */
+    * { 
+        box-shadow: none;
+        box-sizing: border-box; 
+    }
+    
+    body { 
+        font-family: "Poppins", sans-serif; 
+        background-color: #FFFDF3; 
+        margin: 0; 
+        padding: 0; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        min-height: 100vh; 
+    }
+    
+    main { 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        width: 100%; 
+        padding: 40px 20px; 
+        flex: 1; 
+    }
+
+    /* 2. Encabezado y Pie de Página (Header & Footer) */
+    header { 
+        background-color: #FFFBE0; 
+        width: 100%; 
+        padding: 20px 0; 
+        text-align: center; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.02); 
+    }
+    
+    h1 { 
+        color: #6E5A1C; 
+        font-family: 'Jua', sans-serif; 
+        margin: 0; 
+        font-size: 2rem; 
+    }
+    
+    header p { 
+        color: #8A763D; 
+        font-weight: 500; 
+    }
+
+    footer { 
+        width: 100%; 
+        background-color: #FFFBE0; 
+        padding: 15px 0; 
+        text-align: center; 
+        font-size: 13px; 
+        color: #8A763D; 
+        border-top: 1px solid #F2E8B6; 
+    }
+    
+    footer p { 
+        margin: 4px 0; 
+        font-family: 'Poppins', sans-serif; 
+    }
+
+    /* 3. Estructura del Formulario */
+    .form-container { 
+        max-width: 500px; 
+        width: 100%; 
+        background: #FFFFFF; 
+        padding: 35px; 
+        border-radius: 12px; 
+        box-shadow: 0 8px 24px rgba(230, 220, 180, 0.25); 
+        border-top: 6px solid #E6CD6E; 
+    }
+    
+    .form-group { 
+        margin-bottom: 22px; 
+    }
+    
+    label { 
+        display: block; 
+        margin-bottom: 8px; 
+        font-weight: 600; 
+        color: #8A763D; 
+        font-size: 14px; 
+    }
+    
+    input[type="text"], 
+    input[type="number"], 
+    input[type="date"] { 
+        width: 100%; 
+        padding: 12px; 
+        border: 1px solid #F2E8B6; 
+        border-radius: 6px; 
+        font-family: "Poppins", sans-serif; 
+        font-size: 14px; 
+        background-color: #FFFDF0; 
+        color: #5C501E; 
+        transition: all 0.3s ease; 
+    }
+    
+    input:focus { 
+        outline: none; 
+        border-color: #E6CD6E; 
+        background-color: #FFFFFF; 
+        box-shadow: 0 0 5px rgba(230, 205, 110, 0.3); 
+    }
+
+    /* 4. Botones y Enlaces de Navegación */
+    .btn-submit { 
+        background-color: #E6CD6E; 
+        color: white; 
+        border: none; 
+        padding: 14px 15px; 
+        width: 100%; 
+        border-radius: 6px; 
+        font-size: 16px; 
+        font-weight: bold; 
+        cursor: pointer; 
+        transition: background-color 0.3s ease; 
+        font-family: "Poppins", sans-serif; 
+        margin-top: 10px; 
+    }
+    
+    .btn-submit:hover { 
+        background-color: #CDBA5A; 
+    }
+    
+    .btn-back { 
+        display: inline-block; 
+        text-align: center; 
+        margin-top: 25px; 
+        color: #8A763D; 
+        text-decoration: none; 
+        font-size: 14px; 
+        font-weight: 500; 
+        transition: color 0.3s ease; 
+    }
+    
+    .btn-back:hover { 
+        color: #E6CD6E; 
+    }
+
+    /* 5. Tarjetas Dinámicas Detalladas (READ) */
+    .card { 
+        background: #FFFFFF; 
+        padding: 20px; 
+        margin-top: 15px; 
+        border-radius: 8px; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+        border-left: 5px solid #E6CD6E; 
+        width: 100%; 
+    }
+    
+    .card h2 { 
+        margin: 0 0 12px 0; 
+        font-size: 20px; 
+        color: #6E5A1C; 
+        border-bottom: 1px dashed #F2E8B6;
+        padding-bottom: 5px;
+    }
+    
+    .card p { 
+        margin: 6px 0; 
+        font-size: 13.5px; 
+        color: #5C501E; 
+    }
+    
+    .btn-card-edit { 
+        background-color: #E0F7FA; 
+        border: none; 
+        padding: 8px 12px; 
+        border-radius: 4px; 
+        color: #006064; 
+        font-family: 'Poppins'; 
+        font-size: 12px; 
+        font-weight: 600; 
+        cursor: pointer; 
+        transition: background-color 0.2s ease;
+        margin-top: 10px;
+    }
+    
+    .btn-card-edit:hover {
+        background-color: #B2EBF2;
+    }
+    
+    .btn-card-delete { 
+        background-color: #FFEBEE; 
+        border: none; 
+        padding: 8px 12px; 
+        border-radius: 4px; 
+        color: #C62828; 
+        font-family: 'Poppins'; 
+        font-size: 12px; 
+        font-weight: 600; 
+        cursor: pointer; 
+        transition: background-color 0.2s ease;
+        margin-top: 10px;
+    }
+
+    .btn-card-delete:hover {
+        background-color: #FFCDD2;
+    }
+</style>
+
+</body>
+</html>
