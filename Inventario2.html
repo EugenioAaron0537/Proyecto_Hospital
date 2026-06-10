@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Jua:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Oro de Ley - Inventario Medico</title>
+</head>
+<body>
+
+<header>
+    <h1>Inventario Medico - Hospital Oro de Ley</h1>
+    <p> Rellene los datos solicitados para registrar un producto o insumo en el inventario.</p>
+</header>
+
+<main>
+    <div class="form-container">
+        <form id="formInventario" onsubmit="procesarFormulario(event)">
+            <h3 id="tituloFormulario" style="text-align: center; color: #9E4693; margin-top: 0; margin-bottom: 20px;">Registrar Producto / Insumo</h3>
+            
+            <div class="form-group">
+                <label for="id_consumo">ID Producto / Insumo:</label>
+                <input type="text" id="id_consumo" name="id_consumo" placeholder="Ej: INV-001" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="producto">Producto:</label>
+                <input type="text" id="producto" name="producto" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="categoria">Categoría:</label>
+                <input type="text" id="categoria" name="categoria" placeholder="Ej: Material de curación, Medicamento" required>
+            </div>
+
+            <div class="form-group">
+                <label for="stock">Stock (Cantidad):</label>
+                <input type="number" id="stock" name="stock" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="unidad">Unidad:</label>
+                <input type="text" id="unidad" name="unidad" placeholder="Ej: Pares, Piezas, Frasco" required>
+            </div>
+
+            <div class="form-group">
+                <label for="precio">Precio:</label>
+                <input type="text" id="precio" name="precio" required>
+            </div>
+
+            <div class="form-group">
+                <label for="fecha_caducidad">Fecha de Caducidad:</label>
+                <input type="text" id="fecha_caducidad" name="fecha_caducidad" required>
+            </div>
+
+            <div class="form-group">
+                <label for="proveedor">Proveedor:</label>
+                <input type="text" id="proveedor" name="proveedor" required>
+            </div>
+
+            <button type="submit" id="btnGuardar" class="btn-submit">Registrar Producto/Insumo</button>
+            <button type="button" id="btnCancelarEdicion" class="btn-cancelar" onclick="cancelarEdicion()">Cancelar Edición</button>
+        </form>
+    </div>
+
+    <div id="listaInventario" style="margin-top: 20px; width: 100%; max-width: 500px;"></div>
+
+    <a href="index.html" class="btn-back"> Volver al Inicio</a>
+</main>
+
+<footer>
+    <p>Eugenio Zarate Aaron David - Programación</p>
+    <p>24308051280537 - 4-I</p>
+</footer>
+
+<script>
+    let inventarioGlobal = [];
+    let modoEdicion = false;
+
+    // 1. CARGAR DATOS DE LA BASE DE DATOS
+    async function cargarInventario() {
+        try {
+            const res = await fetch('/inventario2');
+            inventarioGlobal = await res.json();
+            const contenedor = document.getElementById("listaInventario");
+            contenedor.innerHTML = '<h3 style="text-align: center; color: #9E4693;">Inventario Actual</h3>';
+
+            inventarioGlobal.forEach(item => {
+                let card = document.createElement("div");
+                card.classList.add("card-inventario");
+                card.innerHTML = `
+                    <h2>${item.producto}</h2>
+                    <p><strong>ID Insumo:</strong> ${item.id_consumo}</p>
+                    <p><strong>Categoría:</strong> ${item.categoria}</p>
+                    <p><strong>Existencia (Stock):</strong> ${item.stock} ${item.unidad}</p>
+                    <p><strong>Precio unitario:</strong> ${item.precio}</p>
+                    <p><strong>Caducidad:</strong> ${item.fecha_caducidad}</p>
+                    <p><strong>Proveedor:</strong> ${item.proveedor}</p>
+                    <div class="botones-admin">
+                        <button type="button" class="btn-edit" onclick="prepararEdicion('${item.id_consumo}')">✏️ Editar Todo (Admin)</button>
+                        <button type="button" class="btn-delete" onclick="eliminarProducto('${item.id_consumo}')">🗑️ Dar de Baja (Admin)</button>
+                    </div>
+                `;
+                contenedor.appendChild(card);
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    window.onload = cargarInventario;
+
+    // 2. PREPARAR FORMULARIO PARA EDICIÓN TOTAL
+    function prepararEdicion(id) {
+        const item = inventarioGlobal.find(i => i.id_consumo === id);
+        if(!item) return;
+
+        document.getElementById("id_consumo").value = item.id_consumo;
+        document.getElementById("id_consumo").readOnly = true; 
+        document.getElementById("producto").value = item.producto;
+        document.getElementById("categoria").value = item.categoria;
+        document.getElementById("stock").value = item.stock;
+        document.getElementById("unidad").value = item.unidad;
+        document.getElementById("precio").value = item.precio;
+        document.getElementById("fecha_caducidad").value = item.fecha_caducidad;
+        document.getElementById("proveedor").value = item.proveedor;
+
+        document.getElementById("tituloFormulario").innerText = "Modificando Insumo...";
+        let btnGuardar = document.getElementById("btnGuardar");
+        btnGuardar.innerHTML = "💾 Guardar Cambios en el Insumo";
+        btnGuardar.classList.add("modo-edicion");
+        
+        // Se mantiene oculto visualmente según la instrucción de un solo botón
+        // document.getElementById("btnCancelarEdicion").style.display = "block";
+        
+        modoEdicion = true;
+        window.scrollTo(0, 0);
+    }
+
+    // 3. CANCELAR EDICIÓN
+    function cancelarEdicion() {
+        document.getElementById("formInventario").reset();
+        document.getElementById("id_consumo").readOnly = false;
+        document.getElementById("tituloFormulario").innerText = "Registrar Producto / Insumo";
+        let btnGuardar = document.getElementById("btnGuardar");
+        btnGuardar.innerText = "Registrar Producto/Insumo";
+        btnGuardar.classList.remove("modo-edicion");
+        document.getElementById("btnCancelarEdicion").style.display = "none";
+        modoEdicion = false;
+    }
+
+    // 4. GUARDAR O ACTUALIZAR (POST / PUT)
+    async function procesarFormulario(e) {
+        e.preventDefault();
+        const id_consumo = document.getElementById("id_consumo").value;
+        const datosProducto = {
+            id_consumo,
+            producto: document.getElementById("producto").value,
+            categoria: document.getElementById("categoria").value,
+            stock: parseInt(document.getElementById("stock").value),
+            unidad: document.getElementById("unidad").value,
+            precio: document.getElementById("precio").value,
+            fecha_caducidad: document.getElementById("fecha_caducidad").value,
+            proveedor: document.getElementById("proveedor").value
+        };
+
+        if (modoEdicion) {
+            let password = prompt("Ingrese contraseña de Administrador para APLICAR CAMBIOS:");
+            if (!password) return;
+
+            try {
+                const res = await fetch(`/inventario2/${id_consumo}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'admin-password': password },
+                    body: JSON.stringify(datosProducto)
+                });
+                const resultado = await res.json();
+                if (res.ok) { alert("✅ " + resultado.mensaje); cancelarEdicion(); cargarInventario(); } 
+                else { alert("❌ Error: " + resultado.error); }
+            } catch (e) { alert("Error de conexión"); }
+        } else {
+            try {
+                const res = await fetch('/inventario2', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datosProducto)
+                });
+                const resultado = await res.json();
+                if (res.ok) { alert("✅ " + (resultado.mensaje || "Producto almacenado.")); cancelarEdicion(); cargarInventario(); }
+                else { alert("❌ Error: " + resultado.error); }
+            } catch (e) { alert("Error de conexión"); }
+        }
+    }
+
+    // 5. ELIMINAR REGISTRO
+    async function eliminarProducto(id) {
+        let password = prompt("Ingrese contraseña de Administrador para ELIMINAR el registro:");
+        if (!password) return;
+        if (!confirm("¿Estás seguro de que deseas eliminar permanentemente este insumo del inventario?")) return;
+
+        try {
+            const res = await fetch(`/inventario2/${id}`, { method: 'DELETE', headers: { 'admin-password': password } });
+            const resultado = await res.json();
+            if (res.ok) { alert("✅ " + resultado.mensaje); cargarInventario(); } 
+            else { alert("❌ Error: " + resultado.error); }
+        } catch (e) { alert("Error de conexión"); }
+    }
+</script>
+
+<style>
+    * { box-sizing: border-box; }
+    body { font-family: "Poppins", sans-serif; background-color: #FDF5FC; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    header { background-color: #F8E6F5; width: 100%; padding: 20px 0; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    h1 { color: #9E4693; font-family: 'Jua', sans-serif; margin: 0; font-size: 2rem; }
+    header p { color: #5C2355; font-weight: 500; }
+    main { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 40px 20px; flex: 1; }
+    .form-container { max-width: 500px; width: 100%; background: #FFFFFF; padding: 35px; border-radius: 12px; box-shadow: 0 8px 24px rgba(158, 70, 147, 0.1); border-top: 6px solid #e897dd; }
+    .form-group { margin-bottom: 22px; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; color: #5C2355; font-size: 14px; }
+    input[type="text"], input[type="number"] { width: 100%; padding: 12px; border: 1px solid #e897dd; border-radius: 6px; font-family: "Poppins", sans-serif; font-size: 14px; background-color: #FFF9FE; color: #5C2355; transition: all 0.3s ease; }
+    input:focus { outline: none; border-color: #9E4693; background-color: #fff; box-shadow: 0 0 5px rgba(158, 70, 147, 0.2); }
+    
+    .btn-submit { background-color: #e897dd; color: white; border: none; padding: 14px 15px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: "Poppins", sans-serif; margin-top: 10px; }
+    .btn-submit:hover { background-color: #9E4693; }
+    
+    /* BOTÓN CUANDO ESTÁ EN MODO EDICIÓN (VERDE OSCURO CON TEXTO DE INSUMO) */
+    .btn-submit.modo-edicion { background-color: #0b666a; color: white; font-size: 16px; } 
+    .btn-submit.modo-edicion:hover { background-color: #084d50; }
+    
+    .btn-cancelar { display: none; background-color: #ef4444; color: white; border: none; padding: 14px 15px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; font-family: "Poppins", sans-serif; transition: all 0.3s ease; }
+    .btn-cancelar:hover { background-color: #dc2626; }
+    
+    .btn-back { display: inline-block; text-align: center; margin-top: 25px; color: #5C2355; text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.3s ease; }
+    .btn-back:hover { color: #9E4693; }
+    
+    footer { width: 100%; background-color: #F8E6F5; padding: 15px 0; text-align: center; font-size: 13px; color: #5C2355; border-top: 1px solid #e897dd; }
+    footer p { margin: 4px 0; font-family: 'Poppins', sans-serif; }
+    
+    .card-inventario { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 5px solid #e897dd; width: 100%; }
+    .card-inventario h2 { margin: 0 0 10px 0; font-size: 18px; color: #9E4693; }
+    .card-inventario p { margin: 5px 0; font-size: 14px; color: #5C2355; }
+    
+    /* ESTILOS DE LOS BOTONES AÑADIDOS PARA EDITAR/ELIMINAR */
+    .botones-admin { margin-top: 15px; display: flex; gap: 10px; }
+    .botones-admin button { padding: 8px 12px; font-size: 13px; cursor: pointer; border: none; border-radius: 6px; font-family: "Poppins", sans-serif; font-weight: 600; transition: 0.3s; }
+    .btn-edit { background-color: #E6F4F1; color: #006D77; }
+    .btn-edit:hover { background-color: #CCE3E0; }
+    .btn-delete { background-color: #FEEDED; color: #B91C1C; }
+    .btn-delete:hover { background-color: #FCD6D6; }
+</style>
+</body>
+</html>
