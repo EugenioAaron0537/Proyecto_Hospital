@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Jua:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Oro de Ley - Citas Medicas</title>
+</head>
+<body>
+
+<header>
+    <h1>Citas Medicas - Hospital Oro de Ley</h1>
+    <p> Rellene los datos solicitados para programar una cita médica en el sistema.</p>
+</header>
+
+<main>
+    <div class="form-container">
+        <form id="formCitas" onsubmit="procesarFormulario(event)">
+            <h3 id="tituloFormulario" style="text-align: center; color: #3A7523; margin-top: 0; margin-bottom: 20px;">Agendar Nueva Cita</h3>
+            
+            <div class="form-group">
+                <label for="id_cita">ID Cita:</label>
+                <input type="text" id="id_cita" name="id_cita" placeholder="Ej: C-001" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="nombre_paciente">Nombre del Paciente:</label>
+                <input type="text" id="nombre_paciente" name="nombre_paciente" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="nombre_medico">Nombre del Médico Asignado:</label>
+                <input type="text" id="nombre_medico" name="nombre_medico" required>
+            </div>
+
+            <div class="form-group">
+                <label for="fecha_hora">Fecha y Hora:</label>
+                <input type="text" id="fecha_hora" name="fecha_hora" placeholder="Ej: 01/06/2025 a las 10:00 am" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="consultorio">Consultorio:</label>
+                <input type="text" id="consultorio" name="consultorio" placeholder="Ej: 110, Pediatría A" required>
+            </div>
+
+            <div class="form-group">
+                <label for="estado">Estado de la Cita:</label>
+                <input type="text" id="estado" name="estado" placeholder="PROGRAMADA / COMPLETADA / CANCELADA" required>
+            </div>
+
+            <div class="form-group">
+                <label for="costo">Costo / Aseguranza:</label>
+                <input type="text" id="costo" name="costo" placeholder="Ej: $500 o $800 + Aseguranza = $0" required>
+            </div>
+
+            <button type="submit" id="btnGuardar" class="btn-submit">Listo</button>
+            <button type="button" id="btnCancelarEdicion" class="btn-cancelar" onclick="cancelarEdicion()">Cancelar Edición</button>
+        </form>
+    </div>
+
+    <div id="listaCitas" style="margin-top: 20px; width: 100%; max-width: 500px;"></div>
+
+    <a href="index.html" class="btn-back"> Volver al Inicio</a>
+</main>
+
+<footer>
+    <p>Eugenio Zarate Aaron David - Programación</p>
+    <p>24308051280537 - 4-I</p>
+</footer>
+
+<script>
+    let citasGlobales = [];
+    let modoEdicion = false;
+
+    // 1. OBTENER DATOS AL CARGAR LA PÁGINA
+    async function cargarCitas() {
+        try {
+            const res = await fetch('/citasmedicas2');
+            citasGlobales = await res.json();
+            const contenedor = document.getElementById("listaCitas");
+            contenedor.innerHTML = '<h3 style="text-align: center; color: #3A7523;">Agenda Actual</h3>';
+
+            citasGlobales.forEach(cita => {
+                let card = document.createElement("div");
+                card.classList.add("card-cita");
+                card.innerHTML = `
+                    <h2>Cita: ${cita.id_cita}</h2>
+                    <p><strong>Paciente:</strong> ${cita.nombre_paciente}</p>
+                    <p><strong>Médico:</strong> ${cita.nombre_medico}</p>
+                    <p><strong>Horario:</strong> ${cita.fecha_hora}</p>
+                    <p><strong>Consultorio:</strong> ${cita.consultorio}</p>
+                    <p><strong>Estado:</strong> <span style="font-weight: bold;">${cita.estado.toUpperCase()}</span></p>
+                    <p><strong>Costo:</strong> ${cita.costo}</p>
+                    <div class="botones-admin">
+                        <button type="button" class="btn-edit" onclick="prepararEdicion('${cita.id_cita}')">✏️ Editar Todo (Admin)</button>
+                        <button type="button" class="btn-delete" onclick="eliminarCita('${cita.id_cita}')">🗑️ Dar de Baja (Admin)</button>
+                    </div>
+                `;
+                contenedor.appendChild(card);
+            });
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    window.onload = cargarCitas;
+
+    // 2. SUBIR DATOS AL FORMULARIO PARA EDITAR TODO
+    function prepararEdicion(id) {
+        const cita = citasGlobales.find(c => c.id_cita === id);
+        if(!cita) return;
+
+        document.getElementById("id_cita").value = cita.id_cita;
+        document.getElementById("id_cita").readOnly = true; 
+        document.getElementById("nombre_paciente").value = cita.nombre_paciente;
+        document.getElementById("nombre_medico").value = cita.nombre_medico;
+        document.getElementById("fecha_hora").value = cita.fecha_hora;
+        document.getElementById("consultorio").value = cita.consultorio;
+        document.getElementById("estado").value = cita.estado;
+        document.getElementById("costo").value = cita.costo;
+
+        document.getElementById("tituloFormulario").innerText = "Modificando Cita...";
+        let btnGuardar = document.getElementById("btnGuardar");
+        btnGuardar.innerHTML = "💾 Guardar Cambios en el Paciente";
+        btnGuardar.classList.add("modo-edicion");
+        
+        // El botón de cancelar se queda oculto visualmente según la petición de tener solo 1 botón
+        // document.getElementById("btnCancelarEdicion").style.display = "block"; 
+        
+        modoEdicion = true;
+        window.scrollTo(0, 0); 
+    }
+
+    // 3. CANCELAR LA EDICIÓN Y LIMPIAR
+    function cancelarEdicion() {
+        document.getElementById("formCitas").reset();
+        document.getElementById("id_cita").readOnly = false;
+        document.getElementById("tituloFormulario").innerText = "Agendar Nueva Cita";
+        let btnGuardar = document.getElementById("btnGuardar");
+        btnGuardar.innerText = "Listo";
+        btnGuardar.classList.remove("modo-edicion");
+        document.getElementById("btnCancelarEdicion").style.display = "none";
+        modoEdicion = false;
+    }
+
+    // 4. PROCESAR FORMULARIO (POST O PUT)
+    async function procesarFormulario(e) {
+        e.preventDefault();
+        const id_cita = document.getElementById("id_cita").value;
+        const datosCita = {
+            id_cita,
+            nombre_paciente: document.getElementById("nombre_paciente").value,
+            nombre_medico: document.getElementById("nombre_medico").value,
+            fecha_hora: document.getElementById("fecha_hora").value,
+            consultorio: document.getElementById("consultorio").value,
+            estado: document.getElementById("estado").value,
+            costo: document.getElementById("costo").value
+        };
+
+        if (modoEdicion) {
+            let password = prompt("Ingrese contraseña de Administrador para APLICAR CAMBIOS:");
+            if (!password) return;
+
+            try {
+                const res = await fetch(`/citasmedicas2/${id_cita}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'admin-password': password },
+                    body: JSON.stringify(datosCita)
+                });
+                const resultado = await res.json();
+                if (res.ok) { alert("✅ " + resultado.mensaje); cancelarEdicion(); cargarCitas(); } 
+                else { alert("❌ Error: " + resultado.error); }
+            } catch (e) { alert("Error de conexión"); }
+        } else {
+            try {
+                const res = await fetch('/citasmedicas2', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datosCita)
+                });
+                if (res.ok) { alert("✅ Cita agendada correctamente."); cancelarEdicion(); cargarCitas(); }
+            } catch (e) { alert("Error de conexión"); }
+        }
+    }
+
+    // 5. ELIMINAR DATO
+    async function eliminarCita(id) {
+        let password = prompt("Ingrese contraseña de Administrador para CANCELAR la cita:");
+        if (!password) return;
+        if (!confirm("¿Estás seguro de que deseas eliminar permanentemente esta cita?")) return;
+
+        try {
+            const res = await fetch(`/citasmedicas2/${id}`, { method: 'DELETE', headers: { 'admin-password': password } });
+            const resultado = await res.json();
+            if (res.ok) { alert("✅ " + resultado.mensaje); cargarCitas(); } 
+            else { alert("❌ Error: " + resultado.error); }
+        } catch (e) { alert("Error de conexión"); }
+    }
+</script>
+
+<style>
+    * { box-sizing: border-box; }
+    body { font-family: "Poppins", sans-serif; background-color: #E8F7E9; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    header { background-color: #D6EED8; width: 100%; padding: 20px 0; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    h1 { color: #3A7523; font-family: 'Jua', sans-serif; margin: 0; font-size: 2rem; }
+    header p { color: #1E4010; font-weight: 500; }
+    main { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 40px 20px; flex: 1; }
+    .form-container { max-width: 500px; width: 100%; background: #FFFFFF; padding: 35px; border-radius: 12px; box-shadow: 0 8px 24px rgba(58, 117, 35, 0.1); border-top: 6px solid #64b346; }
+    .form-group { margin-bottom: 22px; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; color: #1E4010; font-size: 14px; }
+    input[type="text"] { width: 100%; padding: 12px; border: 1px solid #A1D98C; border-radius: 6px; font-family: "Poppins", sans-serif; font-size: 14px; background-color: #F7FDF7; color: #1E4010; transition: all 0.3s ease; }
+    input:focus { outline: none; border-color: #3A7523; background-color: #fff; box-shadow: 0 0 5px rgba(58, 117, 35, 0.2); }
+    
+    .btn-submit { background-color: #64b346; color: white; border: none; padding: 14px 15px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: "Poppins", sans-serif; margin-top: 10px; }
+    .btn-submit:hover { background-color: #3A7523; }
+    
+    /* BOTÓN CUANDO ESTÁ EN MODO EDICIÓN (VERDE OSCURO CON TEXTO DE PACIENTE) */
+    .btn-submit.modo-edicion { background-color: #0b666a; color: white; font-size: 16px; } 
+    .btn-submit.modo-edicion:hover { background-color: #084d50; }
+    
+    .btn-cancelar { display: none; background-color: #ef4444; color: white; border: none; padding: 14px 15px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; font-family: "Poppins", sans-serif; transition: all 0.3s ease; }
+    .btn-cancelar:hover { background-color: #dc2626; }
+    
+    .btn-back { display: inline-block; text-align: center; margin-top: 25px; color: #1E4010; text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.3s ease; }
+    .btn-back:hover { color: #3A7523; }
+    
+    footer { width: 100%; background-color: #D6EED8; padding: 15px 0; text-align: center; font-size: 13px; color: #1E4010; border-top: 1px solid #A1D98C; }
+    footer p { margin: 4px 0; font-family: 'Poppins', sans-serif; }
+    
+    .card-cita { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 5px solid #64b346; width: 100%; }
+    .card-cita h2 { margin: 0 0 10px 0; font-size: 18px; color: #3A7523; }
+    .card-cita p { margin: 5px 0; font-size: 14px; color: #1E4010; }
+    
+    /* ESTILOS DE LOS BOTONES AÑADIDOS PARA EDITAR/ELIMINAR */
+    .botones-admin { margin-top: 15px; display: flex; gap: 10px; }
+    .botones-admin button { padding: 8px 12px; font-size: 13px; cursor: pointer; border: none; border-radius: 6px; font-family: "Poppins", sans-serif; font-weight: 600; transition: 0.3s; }
+    .btn-edit { background-color: #E6F4F1; color: #006D77; }
+    .btn-edit:hover { background-color: #CCE3E0; }
+    .btn-delete { background-color: #FEEDED; color: #B91C1C; }
+    .btn-delete:hover { background-color: #FCD6D6; }
+</style>
+</body>
+</html>
