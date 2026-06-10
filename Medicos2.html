@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Jua:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>Oro de Ley - Directorio de Médicos</title>
+</head>
+<body>
+
+<header>
+    <h1>Directorio Médico - Hospital Oro de Ley</h1>
+    <p>Rellene los datos solicitados para registrar un nuevo médico en el sistema.</p>
+</header>
+
+<main>
+    <div class="form-container">
+        <form id="formMedicos" onsubmit="procesarFormulario(event)">
+            <h3 id="tituloFormulario" style="text-align: center; color: #104060; margin-top: 0; margin-bottom: 20px;">Registrar Médico</h3>
+            
+            <div class="form-group">
+                <label>ID Médico:</label>
+                <input type="text" id="id_medico" name="id_medico" placeholder="Ej: D-001" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Nombre Completo:</label>
+                <input type="text" id="nombre_medico" name="nombre_medico" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Especialidad:</label>
+                <input type="text" id="especialidad" name="especialidad" placeholder="Ej: Cardiología, Pediatría" required>
+            </div>
+
+            <div class="form-group">
+                <label>RFC:</label>
+                <input type="text" id="rfc" name="rfc" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Cédula Profesional:</label>
+                <input type="text" id="cedula_profesional" name="cedula_profesional" required>
+            </div>
+
+            <div class="form-group">
+                <label>Turno:</label>
+                <input type="text" id="turno" name="turno" placeholder="Matutino / Vespertino / Nocturno" required>
+            </div>
+
+            <div class="form-group">
+                <label>Número Teléfono:</label>
+                <input type="text" id="telefono" name="telefono" placeholder="Ej: 656 123 4567" required>
+            </div>
+
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="text" id="email" name="email" placeholder="ejemplo@correo.com" required>
+            </div>
+
+            <button type="submit" id="btnGuardar" class="btn-submit">Registrar Médico</button>
+        </form>
+    </div>
+
+    <div id="listaMedicos" style="margin-top: 20px; width: 100%; max-width: 500px;"></div>
+
+    <a href="index.html" class="btn-back">Volver al Inicio</a>
+</main>
+
+<footer>
+    <p>Eugenio Zarate Aaron David - Programación</p>
+    <p>24308051280537 - 4-I</p>
+</footer>
+
+<script>
+    let medicosGlobal = [];
+    let modoEdicion = false;
+
+    // 1. CARGAR DATOS
+    async function cargarMedicos() {
+        try {
+            const res = await fetch('/medicos2');
+            medicosGlobal = await res.json();
+            const contenedor = document.getElementById("listaMedicos");
+            contenedor.innerHTML = '<h3 style="text-align: center; color: #104060;">Directorio Actual</h3>';
+
+            medicosGlobal.forEach(medico => {
+                let card = document.createElement("div");
+                card.classList.add("card-medico");
+                card.innerHTML = `
+                    <h2>Dr(a). ${medico.nombre_medico}</h2>
+                    <p><strong>ID:</strong> ${medico.id_medico}</p>
+                    <p><strong>Especialidad:</strong> ${medico.especialidad}</p>
+                    <p><strong>RFC:</strong> ${medico.rfc}</p>
+                    <p><strong>Cédula:</strong> ${medico.cedula_profesional}</p>
+                    <p><strong>Turno:</strong> ${medico.turno}</p>
+                    <p><strong>Teléfono:</strong> ${medico.telefono}</p>
+                    <p><strong>Email:</strong> ${medico.email}</p>
+                    <div class="botones-admin">
+                        <button type="button" class="btn-edit" onclick="prepararEdicion('${medico.id_medico}')">✏️ Editar Todo (Admin)</button>
+                        <button type="button" class="btn-delete" onclick="eliminarMedico('${medico.id_medico}')">🗑️ Dar de Baja (Admin)</button>
+                    </div>
+                `;
+                contenedor.appendChild(card);
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    window.onload = cargarMedicos;
+
+    // 2. PREPARAR EDICIÓN (Subir datos y cambiar el botón)
+    function prepararEdicion(id) {
+        const medico = medicosGlobal.find(m => m.id_medico === id);
+        if(!medico) return;
+
+        document.getElementById("id_medico").value = medico.id_medico;
+        document.getElementById("id_medico").readOnly = true; 
+        document.getElementById("nombre_medico").value = medico.nombre_medico;
+        document.getElementById("especialidad").value = medico.especialidad;
+        document.getElementById("rfc").value = medico.rfc;
+        document.getElementById("cedula_profesional").value = medico.cedula_profesional;
+        document.getElementById("turno").value = medico.turno;
+        document.getElementById("telefono").value = medico.telefono;
+        document.getElementById("email").value = medico.email;
+
+        // Cambiar título y estilo del botón para que se vea como en tu imagen
+        document.getElementById("tituloFormulario").innerText = "Modificando Datos del Médico...";
+        let btnGuardar = document.getElementById("btnGuardar");
+        btnGuardar.innerHTML = "💾 Guardar Cambios en el Médico";
+        btnGuardar.classList.add("modo-edicion");
+        
+        modoEdicion = true;
+        window.scrollTo(0, 0); // Sube la pantalla al formulario
+    }
+
+    // 3. PROCESAR GUARDADO O ACTUALIZACIÓN
+    async function procesarFormulario(e) {
+        e.preventDefault();
+        const id_medico = document.getElementById("id_medico").value;
+        const datosMedico = {
+            id_medico,
+            nombre_medico: document.getElementById("nombre_medico").value,
+            especialidad: document.getElementById("especialidad").value,
+            rfc: document.getElementById("rfc").value,
+            cedula_profesional: document.getElementById("cedula_profesional").value,
+            turno: document.getElementById("turno").value,
+            telefono: document.getElementById("telefono").value,
+            email: document.getElementById("email").value
+        };
+
+        if (modoEdicion) {
+            // AQUÍ ESTÁ LA SOLICITUD DE CONTRASEÑA OBLIGATORIA
+            let password = prompt("⚠️ Ingrese contraseña de Administrador para APLICAR CAMBIOS:");
+            
+            if (!password) {
+                alert("❌ Operación cancelada. Se requiere la contraseña para editar.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`/medicos2/${id_medico}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'admin-password': password },
+                    body: JSON.stringify(datosMedico)
+                });
+                const resultado = await res.json();
+                
+                if (res.ok) { 
+                    alert("✅ " + resultado.mensaje); 
+                    restaurarFormulario(); 
+                    cargarMedicos(); 
+                } else { 
+                    alert("❌ Error: " + resultado.error); 
+                }
+            } catch (e) { alert("Error al actualizar"); }
+            
+        } else {
+            // MODO REGISTRO NORMAL
+            try {
+                const res = await fetch('/medicos2', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(datosMedico)
+                });
+                const resultado = await res.json();
+                
+                if (res.ok) { 
+                    alert("✅ " + (resultado.mensaje || "Médico registrado.")); 
+                    restaurarFormulario(); 
+                    cargarMedicos(); 
+                } else { 
+                    alert("❌ Error: " + resultado.error); 
+                }
+            } catch (e) { alert("Error al registrar"); }
+        }
+    }
+
+    // Función para regresar el formulario a la normalidad después de guardar
+    function restaurarFormulario() {
+        document.getElementById("formMedicos").reset();
+        document.getElementById("id_medico").readOnly = false;
+        document.getElementById("tituloFormulario").innerText = "Registrar Médico";
+        let btnGuardar = document.getElementById("btnGuardar");
+        btnGuardar.innerText = "Registrar Médico";
+        btnGuardar.classList.remove("modo-edicion");
+        modoEdicion = false;
+    }
+
+    // 4. ELIMINAR (También pide contraseña)
+    async function eliminarMedico(id) {
+        let password = prompt("⚠️ Ingrese contraseña de Administrador para ELIMINAR:");
+        if (!password) return;
+        if (!confirm("¿Seguro que deseas eliminar permanentemente a este médico?")) return;
+
+        try {
+            const res = await fetch(`/medicos2/${id}`, { method: 'DELETE', headers: { 'admin-password': password } });
+            const resultado = await res.json();
+            if (res.ok) { alert("✅ " + resultado.mensaje); cargarMedicos(); } 
+            else { alert("❌ Error: " + resultado.error); }
+        } catch (e) { alert("Error al eliminar"); }
+    }
+</script>
+
+<style>
+    /* TU CSS ORIGINAL */
+    * { box-sizing: border-box; }
+    body { font-family: "Poppins", sans-serif; background-color: #E6EEF4; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+    header { background-color: #B0C8D9; width: 100%; padding: 20px 0; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    h1 { color: #104060; font-family: 'Jua', sans-serif; margin: 0; font-size: 2rem; }
+    header p { color: #1A3040; font-weight: 500; }
+    main { display: flex; flex-direction: column; align-items: center; width: 100%; padding: 40px 20px; flex: 1; }
+    .form-container { max-width: 500px; width: 100%; background: #FFFFFF; padding: 35px; border-radius: 12px; box-shadow: 0 8px 24px rgba(100, 160, 200, 0.3); border-top: 6px solid #5A99C0; }
+    .form-group { margin-bottom: 22px; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; color: #1A3040; font-size: 14px; }
+    input[type="text"], input[type="number"], input[type="date"] { width: 100%; padding: 12px; border: 1px solid #8ABACF; border-radius: 6px; font-family: "Poppins", sans-serif; font-size: 14px; background-color: #F8FDFF; color: #1A3040; transition: all 0.3s ease; }
+    input:focus { outline: none; border-color: #5A99C0; background-color: #fff; box-shadow: 0 0 5px rgba(90, 153, 192, 0.4); }
+    
+    /* BOTÓN REGISTRAR NORMAL */
+    .btn-submit { background-color: #5A99C0; color: white; border: none; padding: 14px 15px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; font-family: "Poppins", sans-serif; margin-top: 10px; }
+    .btn-submit:hover { background-color: #104060; color: white; }
+    
+    /* BOTÓN CUANDO ESTÁ EN MODO EDICIÓN (VERDE OSCURO COMO TU IMAGEN) */
+    .btn-submit.modo-edicion { background-color: #0b666a; color: white; font-size: 16px;}
+    .btn-submit.modo-edicion:hover { background-color: #084d50; }
+
+    .btn-back { display: inline-block; text-align: center; margin-top: 25px; color: #1A3040; text-decoration: none; font-size: 14px; font-weight: 500; transition: color 0.3s ease; }
+    .btn-back:hover { color: #5A99C0; }
+    footer { width: 100%; background-color: #B0C8D9; padding: 15px 0; text-align: center; font-size: 13px; color: #1A3040; border-top: 1px solid #8ABACF; }
+    footer p { margin: 4px 0; font-family: 'Poppins', sans-serif; }
+    
+    /* TARJETAS DE MÉDICOS */
+    .card-medico { background: white; padding: 15px; margin-top: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border-left: 5px solid #5A99C0; width: 100%; }
+    .card-medico h2 { margin: 0 0 10px 0; font-size: 18px; color: #104060; }
+    .card-medico p { margin: 5px 0; font-size: 14px; color: #1A3040; }
+
+    /* ESTILOS DE LOS BOTONES AÑADIDOS PARA EDITAR/ELIMINAR */
+    .botones-admin { margin-top: 15px; display: flex; gap: 10px; }
+    .botones-admin button { padding: 8px 12px; font-size: 13px; cursor: pointer; border: none; border-radius: 6px; font-family: "Poppins", sans-serif; font-weight: 600; transition: 0.3s; }
+    .btn-edit { background-color: #E6F4F1; color: #006D77; }
+    .btn-edit:hover { background-color: #CCE3E0; }
+    .btn-delete { background-color: #FEEDED; color: #B91C1C; }
+    .btn-delete:hover { background-color: #FCD6D6; }
+</style>
+</body>
+</html>
